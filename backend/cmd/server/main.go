@@ -44,7 +44,7 @@ func main() {
 	r.Use(middleware.CORS())
 
 	r.GET("/ws", func(c *gin.Context) {
-		websocket.HandleWebSocket(c, wsHub, repo)
+		websocket.HandleWebSocket(c, wsHub)
 	})
 
 	api := r.Group("/api")

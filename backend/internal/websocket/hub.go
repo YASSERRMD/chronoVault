@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"chronovault/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -58,6 +57,7 @@ func (h *Hub) Run() {
 			h.Lock()
 			h.clients[client] = true
 			h.Unlock()
+
 		case client := <-h.unregister:
 			h.Lock()
 			if _, ok := h.clients[client]; ok {
@@ -65,6 +65,7 @@ func (h *Hub) Run() {
 				close(client.Send)
 			}
 			h.Unlock()
+
 		case message := <-h.broadcast:
 			h.RLock()
 			for client := range h.clients {
@@ -92,7 +93,7 @@ func (h *Hub) BroadcastMessage(message []byte) {
 	h.broadcast <- message
 }
 
-func (c *Client) readPump(repo *repository.Repository) {
+func (c *Client) readPump() {
 	defer func() {
 		c.Hub.UnregisterClient(c)
 		c.Conn.Close()
@@ -163,7 +164,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func HandleWebSocket(c *gin.Context, hub *Hub, repo *repository.Repository) {
+func HandleWebSocket(c *gin.Context, hub *Hub) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println("WebSocket upgrade error:", err)
@@ -171,7 +172,6 @@ func HandleWebSocket(c *gin.Context, hub *Hub, repo *repository.Repository) {
 	}
 
 	client := &Client{
-		ID:   "",
 		Hub:  hub,
 		Conn: conn,
 		Send: make(chan []byte, 256),
@@ -180,5 +180,5 @@ func HandleWebSocket(c *gin.Context, hub *Hub, repo *repository.Repository) {
 	hub.RegisterClient(client)
 
 	go client.writePump()
-	go client.readPump(repo)
+	go client.readPump()
 }
